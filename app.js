@@ -11,9 +11,7 @@ var { buildSchema } = require('graphql');
 
 app.use(bodyParser.json())
 
-
-
-var schema = buildSchema(`
+var eventSchema = buildSchema(`
   type Event {
     _id : ID!
     title: String!
@@ -43,7 +41,13 @@ var schema = buildSchema(`
 `);
 var root = { 
   events : () => {
-    return events;
+    return Event.find().then( events => {
+      return events.map(event => {
+        return {...event._doc}
+      })
+    }).catch( err => {
+      throw err
+    });
   },
   createEvent : (arg) => {       
     const event = new Event ({
@@ -53,22 +57,23 @@ var root = {
         date : arg.eventInput.date
     });
     return event.save().then((result) => {
+
         return {...result._doc}
     }).catch(err => {
-        console.log(err);
+
         throw err;
     });    
   }
 };
 
 app.use('/graphql', graphqlHTTP({
-    schema: schema,
+    schema: eventSchema,
     rootValue: root,
     graphiql: true,
-  }));
+}));
 
 mongoose.connect('mongodb://localhost:27017/graphql').then(() => {
-      app.listen(3000, () => console.log('Now Graphql and Mongodb is connected on port 3000'));
+      app.listen(3000);
 }).catch( err => {
     console.log(err);
 })
